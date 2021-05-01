@@ -4,7 +4,14 @@ class DogsController < ApplicationController
   # GET /dogs
   # GET /dogs.json
   def index
-    @dogs = Dog.all
+    if current_user
+      @dogs = Dog.for_owner(current_user.id)
+    else
+      @dogs = Dog.all
+    end
+
+
+
   end
 
   # GET /dogs/1
@@ -25,9 +32,9 @@ class DogsController < ApplicationController
   # POST /dogs.json
   def create
     @dog = Dog.new(dog_params)
-
+    @dog.owner = current_user
     respond_to do |format|
-      if @dog.save
+      if @dog.save!
         @dog.images.attach(params[:dog][:image]) if params[:dog][:image].present?
 
         format.html { redirect_to @dog, notice: 'Dog was successfully created.' }
@@ -43,7 +50,11 @@ class DogsController < ApplicationController
   # PATCH/PUT /dogs/1.json
   def update
     respond_to do |format|
-      if @dog.update(dog_params)
+      if @dog.owner != current_user
+        @dog.errors.add(:base, "Cannot update a dog that does not belong to you.")
+        format.html { redirect_to @dog, notice: @dog.errors.full_messages.join(',') }
+        format.json { render json: @dog.errors, status: :unprocessable_entity }
+      elsif @dog.update(dog_params)
         @dog.images.attach(params[:dog][:image]) if params[:dog][:image].present?
 
         format.html { redirect_to @dog, notice: 'Dog was successfully updated.' }
@@ -58,10 +69,19 @@ class DogsController < ApplicationController
   # DELETE /dogs/1
   # DELETE /dogs/1.json
   def destroy
-    @dog.destroy
-    respond_to do |format|
-      format.html { redirect_to dogs_url, notice: 'Dog was successfully destroyed.' }
-      format.json { head :no_content }
+    if @dog.owner != current_user
+      respond_to do |format|
+        @dog.errors.add(:base, "Cannot delete a dog that does not belong to you.")
+        format.html { redirect_to @dog, notice: @dog.errors.full_messages.join(',') }
+        format.json { render json: @dog.errors, status: :unprocessable_entity }
+    end
+
+    else
+      @dog.destroy
+      respond_to do |format|
+        format.html { redirect_to dogs_url, notice: 'Dog was successfully destroyed.' }
+        format.json { head :no_content }
+      end
     end
   end
 

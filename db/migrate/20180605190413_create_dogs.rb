@@ -6,6 +6,7 @@ class CreateDogs < ActiveRecord::Migration[5.2]
       t.timestamp :adoption_date
       t.text :description
       t.timestamps
+      t.integer :user_id
     end
   end
 end
